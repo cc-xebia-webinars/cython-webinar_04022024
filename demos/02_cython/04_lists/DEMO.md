@@ -1,0 +1,186 @@
+# Cython: Work with Lists
+
+1. Ensure the latest version of the following PyPi packages are installed.
+
+    ```bash
+    python -m pip install --upgrade pip cython
+    ```
+
+2. Create a new folder named `demo`. Do all programming and command line work in the `demo` folder.
+
+    ```bash
+    mkdir demo
+    ```
+
+3. In the `demo` folder, create new file named `setup.py`. Add the following code to the file.
+
+    ```python
+    from distutils.core import setup
+    from Cython.Build import cythonize
+
+    setup(ext_modules=cythonize("./double_nums_mod.pyx"))
+    ```
+
+4. In the `demo` folder, create a new file named `double_nums_mod.pyx` file. Add the following code to the file.
+
+    ```cython
+    def do_double_nums(nums):
+        result = []
+
+        for num in nums:
+            result.append(num * 2)
+
+        return result
+    ```
+
+5. In the `demo` folder, create a new file named `app.py` file. Add the follow code to the file.
+
+    ```python
+    from double_nums_mod import do_double_nums
+
+
+    def main() -> None:
+        print(do_double_nums(range(5)))
+
+
+    if __name__ == "__main__":
+        main()
+    ```
+
+6. In the `demo` folder, create a new file named `Makefile` file. Add the follow code to the file.
+
+    ```makefile
+    double_nums_mod: ./double_nums_mod.pyx
+        python setup.py build_ext --inplace
+
+
+    clean:
+        rm -f *.so
+        rm -f *.c
+        rm -rf build
+    ```
+
+7. Build the Cython extension module.
+
+    ```bash
+    make -B
+    ```
+
+8. Run the application.
+
+    ```bash
+    python app.py
+    ```
+
+    The output will be the following:
+
+    ```text
+    [0, 2, 4, 6, 8]
+    ```
+
+9. Let's review the list code. In the `double_nums_mod.c` file, search for the text `__pyx_pf_15double_nums_mod_do_double_nums`. There will be three matches, find the third match. In the code implmentation there will be a `for-loop` and the multiplication code.
+
+```c
+for (;;) {
+  // code omitted
+}
+```
+
+If you look at the loop closely, the loop iterates until a Python Stop Iteration exception is raised. This is because the loop is implemented as a Python loop. This is not the most efficient way to implement the loop. We can improve the performance by using a C loop.
+
+If you examine the details of the multiplication code and new list creation, you will see familiar inefficient code to doing math with Python objects and appending to a Python list.
+
+```c
+__pyx_t_4 = __Pyx_PyInt_MultiplyObjC(__pyx_v_num, __pyx_int_2, 2, 0, 0);
+__pyx_t_5 = __Pyx_PyList_Append(__pyx_v_result, __pyx_t_4);
+```
+
+We can make this better.
+
+
+10. Update `double_nums_mod.pyx` file to use the following code.
+
+    ```cython
+    def do_double_nums(nums: list[int]) -> list[int]:
+        result: list[int] = []
+
+        for num in nums:
+            result.append(num * 2)
+
+        return result
+    ```
+
+    Update `app.py` file to use the following code.
+
+    ```python
+    def main() -> None:
+        print(do_double_nums(list(range(5))))
+
+11. Review the implementation of the `__pyx_pf_15double_nums_mod_do_double_nums`. The multiplication and list append code is the same, but the stop iteration mechanism for iterating the list is now removed. The iteration is now a fixed iteration based on the length of the list not a Python iterator. This is a small improvement accomplished by adding type hints to the Python code.
+
+12. Let's continue to improve the loop, update `double_nums_mod.pyx` file to use the following code.
+
+    ```cython
+    def do_double_nums(nums: list[int]) -> list[int]:
+        index: int = 0
+        count: int = len(nums)
+        result: list[int] = []
+
+        for num in range(count):
+            result.append(num * 2)
+
+        return result
+    ```
+
+    The `cdef` 
+
+13. Review the implementation of the `__pyx_pf_15double_nums_mod_do_double_nums`. The loop has been further optimized to be standard C for-loop with an initial expression, conditional expression, and increment expression. Adding Python Type Hints and Cython decorations help the Cython compiler produce more optimized C code.
+
+    ```c
+    for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_4; __pyx_t_5+=1) {
+     // omitted
+    }
+    ```
+
+14. Let's update the `do_double_nums` function to use a list comprehension.
+
+    ```cython
+    def do_double_nums(nums: list[int]) -> list[int]:
+        return [num * 2 for num in nums]
+    ```
+
+    Review the C implementation of the `__pyx_pf_15double_nums_mod_do_double_nums`. You will notice Cython's special list comprehension function, `ListComp_Append`, is used instead of the usual Python `PyList_Append` function.
+
+    Normal List Append Function
+    ```c
+    __Pyx_PyList_Append(__pyx_v_result, __pyx_t_6)
+    ```
+
+    List Comprehension Append Function
+    ```c
+    __Pyx_ListComp_Append(__pyx_t_1, (PyObject*)__pyx_t_4)
+    ```
+
+    Also, the `for-loop` used an optimized C for-loop.
+
+15. Python and Cython syntax choices can great impactly the C code generated by the Cython compiler. It is important to understand the Cython syntax and how it impacts the generated C code.
+
+16. Update the `double_nums_mod.pyx` file with the following code:
+
+```cython
+cimport cython
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def do_double_nums(nums: list[int]) -> list[int]:
+    cdef int index = 0
+    cdef int count = len(nums)
+    cdef list result = []
+
+    for index in range(count):
+        result.append(nums[index] * 2)
+
+    return result
+```
+
+17. Build the program and run it to make sure it works. Then compare the C code generated by Cython to the previous versions. You will notice that the Cython compiler has generated more optimized C code by removing bounds checking and wraparound checking. This is a small optimization that can have an impact on performance.

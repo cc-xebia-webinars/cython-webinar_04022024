@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools", "cython"]
+
+[project]
+authors = [
+  {name = "Eric Greene", email = "eric@cloudcontraptions.com"},
+]
+description = "Common Utilities"
+name = "utils"
+version = "1.0.0"

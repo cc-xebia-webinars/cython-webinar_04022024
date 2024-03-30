@@ -1,0 +1,23 @@
+{
+    "name": "Cython Webinar",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "charliermarsh.ruff",
+                "ms-python.mypy-type-checker",
+                "ms-python.python",
+                "ktnrg45.vscode-cython",
+                "littlefoxteam.vscode-python-test-adapter",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.makefile-tools"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "terminal.integrated.shell.linux": "/usr/bin/bash"
+            }
+        }
+    },
+    "dockerFile": "Dockerfile"
+}
